@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Day06",
+            "name": "Day08",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/Day06/Day06.csproj",
+            "projectPath": "${workspaceFolder}/Day08/Day08.csproj",
         }
 
     ]
