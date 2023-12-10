@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics;
+using System.Numerics;
 
 var input = File.ReadAllText("data.txt").Split('\n').Select(x => x.ToCharArray()).ToArray();
 
@@ -63,19 +64,19 @@ do
 
 Console.WriteLine(path.Count / 2);
 
-var inside = 0;
-for (var row = 0; row < input.Length; row++)
+// Make it a little bit faster by using a parallel loop
+var insides = new bool[input.Length * input[0].Length - 1];
+Parallel.For(0, insides.Length, i =>
 {
-    for (var col = 0; col < input[row].Length; col++)
+    var row = i / input[0].Length;
+    var col = i % input[0].Length;
+    if (!path.Contains(new(col, row)) && PointInPoly(new(col, row), edges))
     {
-        if (!path.Contains(new(col, row)) && PointInPoly(new(col, row), edges))
-        {
-            inside++;
-        }
+        insides[i] = true;
     }
-}
+});
 
-System.Console.WriteLine(inside);
+Console.WriteLine(insides.Count(x => x));
 
 // Use the point-in-polygon algorithm (see also https://observablehq.com/@tmcw/understanding-point-in-polygon)
 static bool PointInPoly(Point point, List<Edge> edges)
@@ -83,11 +84,11 @@ static bool PointInPoly(Point point, List<Edge> edges)
     var (x, y) = point;
 
     var inside = false;
-    for (var i = 0; i < edges.Count; i++) {
-        var xi = edges[i].Start.X;
-        var yi = edges[i].Start.Y;
-        var xj = edges[i].End.X;
-        var yj = edges[i].End.Y;
+    foreach(var edge in edges) {
+        var xi = edge.Start.X;
+        var yi = edge.Start.Y;
+        var xj = edge.End.X;
+        var yj = edge.End.Y;
 
         var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
