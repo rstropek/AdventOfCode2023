@@ -1,0 +1,115 @@
+﻿using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
+
+//ConcurrentDictionary<string, int> SectionCountCache = new();
+var input = """
+?#?#?#?#?#?#?#? 1,3,1,6
+""".Split('\n').Select(l =>
+{
+    var parts = l.Split(' ');
+    var damages = parts[1].Split(',').Select(int.Parse).ToArray();
+    return (
+        //ProcessString(parts[0]), //
+        ProcessString(string.Join('?', Enumerable.Range(0, 5).Select(_ => parts[0]))), 
+        //damages
+        damages.Concat(damages).Concat(damages).Concat(damages).Concat(damages).ToArray()
+    );
+})
+.ToArray();
+
+var sums = new long[input.Length];
+Parallel.For(0, input.Length, i =>
+{
+    var item = input[i];
+    var regexStr = GetRegex(item.Item2);
+    var regex = new Regex(regexStr, RegexOptions.Compiled);
+    var p = NumberOfPossibilities(item.Item1, regex, item.Item2.Length);
+    sums[i] = p;
+    System.Console.WriteLine(i);
+});
+
+System.Console.WriteLine(sums.Sum());
+
+static string ProcessString(string input)
+{
+    var trimmed = input.Trim('.');
+    var result = DotDuplicationRemovalRegex().Replace(trimmed, ".");
+    return result;
+}
+
+int NumberOfPossibilities(string pattern, Regex regex, int num)
+{
+    if (pattern.Split('.').Sum(MaxNumberOfSections) < num) { return 0; }
+
+    var hash = pattern.IndexOf('?');
+    if (hash == -1)
+    {
+        if (pattern.Count(p => p == '.') + 1 == num && regex.IsMatch(pattern))
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    return NumberOfPossibilities(ProcessString(pattern[..hash] + '#' + pattern[(hash + 1)..]), regex, num) +
+           NumberOfPossibilities(ProcessString(pattern[..hash] + '.' + pattern[(hash + 1)..]), regex, num);
+}
+
+int MaxNumberOfSections(string pattern)
+{
+    //if (SectionCountCache.TryGetValue(pattern, out var cached)) { return cached; }
+
+    var sb = new StringBuilder();
+    var prev = ' ';
+    for (var i = 0; i < pattern.Length; i++)
+    {
+        if (pattern[i] == '?')
+        {
+            if (prev == '#') { sb.Append('.'); prev = '.'; }
+            else { sb.Append('#'); prev = '#'; }
+        }
+        else
+        {
+            sb.Append(pattern[i]);
+            prev = pattern[i];
+        }
+    }
+
+    var s = sb.ToString();
+    var res = s.Split('.').Length;
+    //SectionCountCache[s] = res;
+
+    return res;
+}
+
+static string GetRegex(int[] damaged)
+{
+    var sb = new StringBuilder(@"^\.*");
+
+    for (var i = 0; i < damaged.Length; i++)
+    {
+        sb.Append("#{");
+        sb.Append(damaged[i]);
+        sb.Append('}');
+        if (i < damaged.Length - 1)
+        {
+            sb.Append(@"\.+");
+        }
+    }
+
+    sb.Append(@"\.*$");
+
+    return sb.ToString();
+}
+
+partial class Program
+{
+    [GeneratedRegex(@"\.{2,}")]
+    private static partial Regex DotDuplicationRemovalRegex();
+}

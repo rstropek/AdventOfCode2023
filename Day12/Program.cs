@@ -1,70 +1,53 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
+//ConcurrentDictionary<string, int> SectionCountCache = new();
 var input = """
-???.### 1,1,3
-.??..??...?##. 1,1,3
-?#?#?#?#?#?#?#? 1,3,1,6
-????.#...#... 4,1,1
-????.######..#####. 1,6,5
-?###???????? 3,2,1
+?.#?????????###.?# 1,1,2,1,5,1
 """.Split('\n').Select(l =>
 {
     var parts = l.Split(' ');
     var damages = parts[1].Split(',').Select(int.Parse).ToArray();
     return (
-        string.Join('?', Enumerable.Range(0, 5).Select(_ => parts[0])), 
-        damages.Concat(damages).Concat(damages).Concat(damages).Concat(damages).ToArray()
+        pattern: ProcessString(parts[0]),
+        //ProcessString(string.Join('?', Enumerable.Range(0, 5).Select(_ => parts[0]))), 
+        groupLengths: damages
+        //damages.Concat(damages).Concat(damages).Concat(damages).Concat(damages).ToArray()
     );
 })
 .ToArray();
 
-var sum = 0;
-foreach(var item in input)
+var line = input[0];
+
+// Find first # from end
+var firstHashFromEnd = line.pattern.LastIndexOf('#');
+var charsToRight = line.pattern.Length - 1 - firstHashFromEnd;
+var numberOfHashesToLeft = Math.Max(0, line.groupLengths[^1] - charsToRight - 1);
+var newPattern = line.pattern[..(firstHashFromEnd - numberOfHashesToLeft)];
+newPattern += new string('#', numberOfHashesToLeft);
+newPattern += line.pattern[firstHashFromEnd..];
+System.Console.WriteLine(line.pattern);
+System.Console.WriteLine(newPattern);
+line.pattern = newPattern;
+
+if (line.pattern.EndsWith('#'))
 {
-    var regexStr = GetRegex(item.Item2);
-    var regex = new Regex(regexStr, RegexOptions.Compiled);
-    var p = NumberOfPossibilities(item.Item1, regex);
-    sum += p;
+    newPattern = line.pattern[..^(line.groupLengths[^1] + 1)];
+    newPattern += ".";
+    newPattern += new string('#', line.groupLengths[^1]);
 }
 
-System.Console.WriteLine(sum);
+System.Console.WriteLine(line.pattern);
+System.Console.WriteLine(newPattern);
 
-static int NumberOfPossibilities(string pattern, Regex regex)
+static string ProcessString(string input)
 {
-    var hash = pattern.IndexOf('?');
-    if (hash == -1)
-    {
-        if (regex.IsMatch(pattern))
-        {
-            return 1;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-
-    return NumberOfPossibilities(pattern[..hash] + '#' + pattern[(hash + 1)..], regex) +
-           NumberOfPossibilities(pattern[..hash] + '.' + pattern[(hash + 1)..], regex);
+    var trimmed = input.Trim('.');
+    var result = DotDuplicationRemovalRegex().Replace(trimmed, ".");
+    return result;
 }
 
-string GetRegex(int[] damaged)
+partial class Program
 {
-    var sb = new StringBuilder(@"^\.*");
-
-    for (var i = 0; i < damaged.Length; i++)
-    {
-        sb.Append("#{");
-        sb.Append(damaged[i]);
-        sb.Append('}');
-        if (i < damaged.Length - 1)
-        {
-            sb.Append(@"\.+");
-        }
-    }
-
-    sb.Append(@"\.*$");
-
-    return sb.ToString();
+    [GeneratedRegex(@"\.{2,}")]
+    private static partial Regex DotDuplicationRemovalRegex();
 }
